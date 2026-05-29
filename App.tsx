@@ -135,8 +135,11 @@ export default function App() {
       const manifest = {
         name: settings.appName || "Plus+Launcher",
         short_name: settings.appName || "Plus+Launcher",
-        start_url: window.location.origin + "/",
+        description: "A modern, sleek, and personal application launcher.",
+        id: "/?source=pwa",
+        start_url: window.location.origin + "/?source=pwa",
         display: "standalone",
+        display_override: ["window-controls-overlay", "minimal-ui"],
         background_color: "#111827",
         theme_color: "#1e3a8a",
         icons: [
