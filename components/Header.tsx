@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { t } from '../i18n';
 
 const getGreeting = (lang: string = "en") => {
   const hour = new Date().getHours();
@@ -59,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({ isEditMode, onToggleEditMode, hasCustom
                         onClick={onToggleEditMode} 
                         className={`text-sm px-3 py-1 rounded-md transition-colors ${isEditMode ? 'bg-blue-600 text-white' : 'bg-gray-700/50 hover:bg-gray-700'}`}
                     >
-                        {isEditMode ? 'Done' : 'Edit'}
+                        {isEditMode ? t(language, "done", "Done") : t(language, "edit", "Edit")}
                     </button>
                )}
                {onLock && (
@@ -105,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ isEditMode, onToggleEditMode, hasCustom
                         onClick={onToggleEditMode} 
                         className={`text-sm px-3 py-1 rounded-md transition-colors ${isEditMode ? 'bg-blue-600 text-white' : 'bg-gray-700/50 hover:bg-gray-700'}`}
                     >
-                        {isEditMode ? 'Done' : 'Edit'}
+                        {isEditMode ? t(language, "done", "Done") : t(language, "edit", "Edit")}
                     </button>
                 )}
                 {onLock && (

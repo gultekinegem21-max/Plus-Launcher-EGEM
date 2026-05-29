@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "../i18n";
 import {
   LockIcon,
   ShieldCheckIcon,
@@ -61,7 +62,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [feedback, setFeedback] = React.useState("");
   const [feedbackSent, setFeedbackSent] = React.useState(false);
   const [isViewingFeedback, setIsViewingFeedback] = React.useState(false);
-  const [feedbacks, setFeedbacks] = React.useState<{ id: number; text: string; user: string | null; date: string }[]>(() => {
+  const [feedbacks, setFeedbacks] = React.useState<
+    { id: number; text: string; user: string | null; date: string }[]
+  >(() => {
     try {
       const stored = localStorage.getItem("plus-launcher-feedback");
       return stored ? JSON.parse(stored) : [];
@@ -74,7 +77,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSendFeedback = () => {
     if (!feedback.trim()) return;
-    const newFb = { id: Date.now(), text: feedback.trim(), user: currentUser || "Anonymous", date: new Date().toLocaleDateString() };
+    const newFb = {
+      id: Date.now(),
+      text: feedback.trim(),
+      user: currentUser || "Anonymous",
+      date: new Date().toLocaleDateString(),
+    };
     const updated = [...feedbacks, newFb];
     setFeedbacks(updated);
     localStorage.setItem("plus-launcher-feedback", JSON.stringify(updated));
@@ -104,7 +112,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       >
         <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            Settings
+            {t(language, "settings", "Settings")}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <svg
@@ -154,21 +162,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 }}
               >
                 <div className="flex items-center gap-2">
-                    <input
-                      name="username"
-                      placeholder="Account Name..."
-                      className="bg-black/50 text-white px-3 py-2 rounded-lg text-xs flex-1 border border-gray-700 focus:outline-none focus:border-blue-500"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase h-[34px]"
-                    >
-                      Sign In
-                    </button>
+                  <input
+                    name="username"
+                    placeholder="Account Name..."
+                    className="bg-black/50 text-white px-3 py-2 rounded-lg text-xs flex-1 border border-gray-700 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase h-[34px]"
+                  >
+                    Sign In
+                  </button>
                 </div>
                 <div className="flex items-center gap-2 px-1">
-                    <input type="checkbox" id="settingsRememberMe" name="rememberMe" className="w-3.5 h-3.5 rounded border-white/10 bg-black/50 accent-blue-500" defaultChecked />
-                    <label htmlFor="settingsRememberMe" className="text-gray-400 text-[10px] cursor-pointer select-none">Remember account</label>
+                  <input
+                    type="checkbox"
+                    id="settingsRememberMe"
+                    name="rememberMe"
+                    className="w-3.5 h-3.5 rounded border-white/10 bg-black/50 accent-blue-500"
+                    defaultChecked
+                  />
+                  <label
+                    htmlFor="settingsRememberMe"
+                    className="text-gray-400 text-[10px] cursor-pointer select-none"
+                  >
+                    Remember account
+                  </label>
                 </div>
               </form>
             )}
@@ -176,10 +195,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="h-px bg-gray-700" />
 
           <div className="flex items-center justify-between">
-            <p className="text-white text-xs font-medium">Language</p>
+            <p className="text-white text-xs font-medium">
+              {t(language, "changeLanguage", "Language")}
+            </p>
             <select
               value={language}
-              onChange={(e) => onChangeLanguage && onChangeLanguage(e.target.value)}
+              onChange={(e) =>
+                onChangeLanguage && onChangeLanguage(e.target.value)
+              }
               className="bg-black/50 text-white px-3 py-1 rounded-lg text-xs border border-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="en">English</option>
@@ -193,7 +216,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="h-px bg-gray-700" />
 
           <div className="flex items-center justify-between">
-            <p className="text-white text-xs font-medium">Customization Mode</p>
+            <p className="text-white text-xs font-medium">
+              {t(language, "customizationMode", "Customization Mode")}
+            </p>
             <button
               onClick={onToggleEditMode}
               className={`h-5 w-10 rounded-full transition-colors relative ${isEditMode ? "bg-blue-600" : "bg-gray-700"}`}
@@ -228,7 +253,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
             {feedbackSent && (
-              <p className="text-[10px] text-green-400 font-medium px-1 animate-in fade-in transition-all">Feedback sent to admin panel! Thank you.</p>
+              <p className="text-[10px] text-green-400 font-medium px-1 animate-in fade-in transition-all">
+                Feedback sent to admin panel! Thank you.
+              </p>
             )}
           </div>
 
@@ -236,7 +263,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-white text-xs font-medium">PIN Protection</p>
+              <p className="text-white text-xs font-medium">
+                {t(language, "passwordLock", "Password Lock")}
+              </p>
               {passwordEnabled ? (
                 <ShieldCheckIcon className="w-4 h-4 text-green-400" />
               ) : (
@@ -275,7 +304,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {passwordEnabled && onToggleFingerprint && (
               <div className="flex items-center justify-between pt-1">
                 <p className="text-white text-[10px] font-medium flex items-center gap-1">
-                  <FingerprintIcon className="w-3 h-3" /> Fingerprint
+                  <FingerprintIcon className="w-3 h-3" />{" "}
+                  {t(language, "fingerprint", "Fingerprint")}
                 </p>
                 <button
                   onClick={onToggleFingerprint}
@@ -291,7 +321,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {passwordEnabled && onToggleFaceId && (
               <div className="flex items-center justify-between">
                 <p className="text-white text-[10px] font-medium flex items-center gap-1">
-                  <FaceIdIcon className="w-3 h-3" /> Face ID
+                  <FaceIdIcon className="w-3 h-3" />{" "}
+                  {t(language, "faceId", "Face ID")}
                 </p>
                 <button
                   onClick={onToggleFaceId}
@@ -347,12 +378,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-3 animate-in fade-in zoom-in-95">
                   <div className="flex flex-col gap-2 mt-2">
                     <label className="text-white text-[10px] font-bold uppercase tracking-widest pl-1">
-                      Launcher Name
+                      {t(language, "changeAppName", "Change App Name")}
                     </label>
                     <input
                       type="text"
                       value={appName || ""}
-                      onChange={(e) => onChangeAppName && onChangeAppName(e.target.value)}
+                      onChange={(e) =>
+                        onChangeAppName && onChangeAppName(e.target.value)
+                      }
                       placeholder="Plus+Launcher"
                       className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500/50 transition-colors"
                     />
@@ -368,10 +401,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         if (file) {
                           const reader = new FileReader();
                           reader.onloadend = () => {
-                            if (typeof reader.result === 'string' && onChangeAppIcon) {
+                            if (
+                              typeof reader.result === "string" &&
+                              onChangeAppIcon
+                            ) {
                               onChangeAppIcon(reader.result);
                               setIconUploadSuccess(true);
-                              setTimeout(() => setIconUploadSuccess(false), 3000);
+                              setTimeout(
+                                () => setIconUploadSuccess(false),
+                                3000,
+                              );
                             }
                           };
                           reader.readAsDataURL(file);
@@ -382,9 +421,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => {
                         fileInputRef.current?.click();
                       }}
-                      className={`col-span-2 py-2 border text-white shadow-lg rounded-lg text-[10px] font-bold uppercase transition-colors ${iconUploadSuccess ? 'bg-green-600 border-green-500/50 hover:bg-green-500 shadow-green-900/20' : 'bg-amber-600 border-amber-500/50 hover:bg-amber-500 shadow-amber-900/20'}`}
+                      className={`col-span-2 py-2 border text-white shadow-lg rounded-lg text-[10px] font-bold uppercase transition-colors ${iconUploadSuccess ? "bg-green-600 border-green-500/50 hover:bg-green-500 shadow-green-900/20" : "bg-amber-600 border-amber-500/50 hover:bg-amber-500 shadow-amber-900/20"}`}
                     >
-                      {iconUploadSuccess ? 'Upload Successful!' : 'Change Launcher Logo'}
+                      {iconUploadSuccess
+                        ? "Upload Successful!"
+                        : t(language, "changeAppIcon", "Change Launcher Logo")}
                     </button>
                     <button
                       onClick={() => {
@@ -393,7 +434,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       }}
                       className="py-2 bg-amber-600/20 hover:bg-amber-600/40 text-amber-500 rounded-lg text-[10px] font-bold uppercase transition-colors"
                     >
-                      Add App / Icon
+                      {t(language, "addApp", "Add App / Icon")}
                     </button>
                     <button
                       onClick={() => {
@@ -402,47 +443,67 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       }}
                       className={`py-2 rounded-lg text-[10px] font-bold uppercase transition-colors ${isEditMode ? "bg-red-600 text-white" : "bg-red-600/20 hover:bg-red-600/40 text-red-500"}`}
                     >
-                      {isEditMode ? "Done Deleting" : "Delete Apps"}
+                      {isEditMode
+                        ? t(language, "done", "Done Deleting")
+                        : t(language, "delete", "Delete Apps")}
                     </button>
                     <button
                       onClick={() => setIsViewingFeedback(!isViewingFeedback)}
                       className="col-span-2 py-2 bg-amber-600 border border-amber-500/50 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 rounded-lg text-[10px] font-bold uppercase transition-colors"
                     >
-                      {isViewingFeedback ? "Hide User Feedback" : "View User Feedback"} 
+                      {isViewingFeedback
+                        ? "Hide User Feedback"
+                        : "View User Feedback"}
                     </button>
                   </div>
-                  
+
                   {isViewingFeedback && (
                     <div className="mt-4 p-3 bg-black/40 border border-gray-700 rounded-xl space-y-3 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                       <div className="flex items-center justify-between">
-                        <p className="text-gray-300 text-[10px] font-bold uppercase tracking-widest">Inbox ({feedbacks.length})</p>
+                        <p className="text-gray-300 text-[10px] font-bold uppercase tracking-widest">
+                          Inbox ({feedbacks.length})
+                        </p>
                         {feedbacks.length > 0 && (
-                            <button
-                                onClick={() => {
-                                    if(confirm("Clear all feedback?")) {
-                                        setFeedbacks([]);
-                                        localStorage.removeItem("plus-launcher-feedback");
-                                    }
-                                }}
-                                className="text-[10px] text-red-400 hover:text-red-300 transition-colors uppercase font-bold"
-                            >
-                                Clear All
-                            </button>
+                          <button
+                            onClick={() => {
+                              if (confirm("Clear all feedback?")) {
+                                setFeedbacks([]);
+                                localStorage.removeItem(
+                                  "plus-launcher-feedback",
+                                );
+                              }
+                            }}
+                            className="text-[10px] text-red-400 hover:text-red-300 transition-colors uppercase font-bold"
+                          >
+                            Clear All
+                          </button>
                         )}
                       </div>
-                      
+
                       {feedbacks.length === 0 ? (
-                        <p className="text-xs text-gray-500 text-center py-4">No feedback received yet.</p>
+                        <p className="text-xs text-gray-500 text-center py-4">
+                          No feedback received yet.
+                        </p>
                       ) : (
-                        feedbacks.slice().reverse().map(fb => (
-                          <div key={fb.id} className="bg-gray-800/50 border border-gray-700/50 p-2 rounded-lg space-y-1">
-                            <div className="flex justify-between items-start">
-                                <p className="text-[10px] text-blue-400 font-medium">{fb.user}</p>
-                                <p className="text-[9px] text-gray-500">{fb.date}</p>
+                        feedbacks
+                          .slice()
+                          .reverse()
+                          .map((fb) => (
+                            <div
+                              key={fb.id}
+                              className="bg-gray-800/50 border border-gray-700/50 p-2 rounded-lg space-y-1"
+                            >
+                              <div className="flex justify-between items-start">
+                                <p className="text-[10px] text-blue-400 font-medium">
+                                  {fb.user}
+                                </p>
+                                <p className="text-[9px] text-gray-500">
+                                  {fb.date}
+                                </p>
+                              </div>
+                              <p className="text-xs text-white">{fb.text}</p>
                             </div>
-                            <p className="text-xs text-white">{fb.text}</p>
-                          </div>
-                        ))
+                          ))
                       )}
                     </div>
                   )}
@@ -465,7 +526,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="text-[8px] text-gray-500 text-center uppercase tracking-widest pt-2 flex flex-col gap-1 mt-4">
             <span>Plus+Launcher v1.5.0</span>
-            <span className="text-blue-500 font-bold">powered by gultekinegem21max</span>
+            <span className="text-blue-500 font-bold">
+              powered by gultekinegem21max
+            </span>
           </div>
         </div>
       </div>
