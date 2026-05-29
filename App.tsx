@@ -739,7 +739,7 @@ export default function App() {
         <Header
           isEditMode={isEditMode}
           onToggleEditMode={() => setIsEditMode(!isEditMode)}
-          hasCustomApps={customApps.length > 0}
+          hasCustomApps={true}
           onReload={loadApps}
           onLock={
             settings.passwordEnabled ? () => setIsLocked(true) : undefined
