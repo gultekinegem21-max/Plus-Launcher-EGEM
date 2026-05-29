@@ -601,7 +601,7 @@ export default function App() {
             }}
           >
             {loginError && (
-              <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{loginError}</p>
+              <p className={`text-xs text-center font-medium py-2 rounded-lg border ${loginError.includes('successfully') ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'}`}>{loginError}</p>
             )}
             <div className="flex flex-col gap-0 border border-white/10 rounded-2xl bg-black/50 focus-within:border-blue-500/50 hover:border-white/20 transition-all overflow-hidden relative">
               <div className="flex items-center group relative border-b border-white/5 transition-all focus-within:bg-blue-500/5">
