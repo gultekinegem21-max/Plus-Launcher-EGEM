@@ -1,11 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
 
-const getGreeting = () => {
+const getGreeting = (lang: string = "en") => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  
+  const greetings: Record<string, { morning: string; afternoon: string; evening: string }> = {
+    en: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening" },
+    tr: { morning: "Günaydın", afternoon: "Tünaydın", evening: "İyi akşamlar" },
+    es: { morning: "Buenos días", afternoon: "Buenas tardes", evening: "Buenas noches" },
+    fr: { morning: "Bonjour", afternoon: "Bon après-midi", evening: "Bonsoir" },
+    de: { morning: "Guten Morgen", afternoon: "Guten Tag", evening: "Guten Abend" }
+  };
+  
+  const trs = greetings[lang] || greetings["en"];
+
+  if (hour < 12) return trs.morning;
+  if (hour < 18) return trs.afternoon;
+  return trs.evening;
 };
 
 interface HeaderProps {
@@ -16,17 +27,19 @@ interface HeaderProps {
     onLock?: () => void;
     onOpenSettings?: () => void;
     appIcon?: string;
+    language?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ isEditMode, onToggleEditMode, hasCustomApps, onReload, onLock, onOpenSettings, appIcon }) => {
-  const [greeting, setGreeting] = useState(getGreeting());
+const Header: React.FC<HeaderProps> = ({ isEditMode, onToggleEditMode, hasCustomApps, onReload, onLock, onOpenSettings, appIcon, language = "en" }) => {
+  const [greeting, setGreeting] = useState(getGreeting(language));
 
   useEffect(() => {
+    setGreeting(getGreeting(language));
     const timerId = setInterval(() => {
-      setGreeting(getGreeting());
+      setGreeting(getGreeting(language));
     }, 60000); // Update every minute
     return () => clearInterval(timerId);
-  }, []);
+  }, [language]);
 
   return (
     <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-white w-full gap-4">

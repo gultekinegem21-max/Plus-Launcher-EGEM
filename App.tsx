@@ -84,6 +84,7 @@ export default function App() {
         recoveryQuestion: undefined,
         recoveryAnswerHash: undefined,
         appName: "Plus+Launcher",
+        language: "en",
       };
       return stored ? { ...defaults, ...JSON.parse(stored) } : defaults;
     } catch (e) {
@@ -93,6 +94,7 @@ export default function App() {
         fingerprintEnabled: false,
         faceIdEnabled: false,
         appName: "Plus+Launcher",
+        language: "en",
       };
     }
   });
@@ -767,6 +769,7 @@ export default function App() {
           }
           onOpenSettings={() => setIsSettingsOpen(true)}
           appIcon={settings.appIcon}
+          language={settings.language}
         />
 
         <div className="space-y-8">
@@ -871,6 +874,8 @@ export default function App() {
         onChangeAppIcon={(url) => saveSettings({ ...settings, appIcon: url })}
         appName={settings.appName}
         onChangeAppName={(name) => saveSettings({ ...settings, appName: name })}
+        language={settings.language}
+        onChangeLanguage={(lang) => saveSettings({ ...settings, language: lang })}
       />
 
       {currentUser && !isLocked && (

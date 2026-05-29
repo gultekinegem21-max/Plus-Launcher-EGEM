@@ -29,4 +29,5 @@ export interface LauncherSettings {
   appIcon?: string;
   appName?: string;
   deletedApps?: string[];
+  language?: string;
 }

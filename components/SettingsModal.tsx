@@ -28,6 +28,8 @@ interface SettingsModalProps {
   onChangeAppIcon?: (url: string) => void;
   appName?: string;
   onChangeAppName?: (name: string) => void;
+  language?: string;
+  onChangeLanguage?: (lang: string) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -51,6 +53,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onChangeAppIcon,
   appName,
   onChangeAppName,
+  language = "en",
+  onChangeLanguage,
 }) => {
   const [adminPin, setAdminPin] = React.useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = React.useState(false);
@@ -169,6 +173,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </form>
             )}
           </div>
+          <div className="h-px bg-gray-700" />
+
+          <div className="flex items-center justify-between">
+            <p className="text-white text-xs font-medium">Language</p>
+            <select
+              value={language}
+              onChange={(e) => onChangeLanguage && onChangeLanguage(e.target.value)}
+              className="bg-black/50 text-white px-3 py-1 rounded-lg text-xs border border-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="en">English</option>
+              <option value="tr">Türkçe</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+
           <div className="h-px bg-gray-700" />
 
           <div className="flex items-center justify-between">
