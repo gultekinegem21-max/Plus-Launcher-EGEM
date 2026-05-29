@@ -144,16 +144,34 @@ export default function App() {
         theme_color: "#1e3a8a",
         icons: [
           {
-            src: settings.appIcon ? new URL(settings.appIcon, window.location.href).href : 'https://ui-avatars.com/api/?name=Plus+Launcher&size=512&background=1e3a8a&color=fff',
-            sizes: "512x512",
+            src: settings.appIcon ? new URL(settings.appIcon, window.location.href).href : 'https://ui-avatars.com/api/?name=Plus+Launcher&size=192&background=1e3a8a&color=fff',
+            sizes: "192x192",
             type: "image/png",
-            purpose: "any maskable"
+            purpose: "any"
           },
           {
             src: settings.appIcon ? new URL(settings.appIcon, window.location.href).href : 'https://ui-avatars.com/api/?name=Plus+Launcher&size=192&background=1e3a8a&color=fff',
             sizes: "192x192",
             type: "image/png",
-            purpose: "any maskable"
+            purpose: "maskable"
+          },
+          {
+            src: settings.appIcon ? new URL(settings.appIcon, window.location.href).href : 'https://ui-avatars.com/api/?name=Plus+Launcher&size=256&background=1e3a8a&color=fff',
+            sizes: "256x256",
+            type: "image/png",
+            purpose: "any"
+          },
+          {
+            src: settings.appIcon ? new URL(settings.appIcon, window.location.href).href : 'https://ui-avatars.com/api/?name=Plus+Launcher&size=512&background=1e3a8a&color=fff',
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any"
+          },
+          {
+            src: settings.appIcon ? new URL(settings.appIcon, window.location.href).href : 'https://ui-avatars.com/api/?name=Plus+Launcher&size=512&background=1e3a8a&color=fff',
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable"
           }
         ]
       };
