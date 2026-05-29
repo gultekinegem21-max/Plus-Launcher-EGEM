@@ -125,11 +125,11 @@ export default function InstallPrompt({ appIcon, deferredPrompt, onClose }: Inst
 
               <div className="space-y-1">
                 <h3 className="text-sm font-black tracking-wide uppercase flex items-center gap-1.5 text-blue-400">
-                  Update Plus Launcher
+                  Download Plus Launcher
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                 </h3>
                 <p className="text-gray-300 text-xs leading-relaxed font-medium">
-                  Would you like to update Plus Launcher to latest version?
+                  Would you like to download Plus Launcher to your device?
                 </p>
               </div>
 
@@ -150,7 +150,7 @@ export default function InstallPrompt({ appIcon, deferredPrompt, onClose }: Inst
                 className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2"
               >
                 <Download className="w-3.5 h-3.5" />
-                Update App
+                Download App
               </button>
               <button
                 onClick={handleDismiss}
@@ -166,17 +166,17 @@ export default function InstallPrompt({ appIcon, deferredPrompt, onClose }: Inst
               <div className="flex flex-col items-center justify-center text-center space-y-2 p-3 animate-in zoom-in-95 duration-300">
                 <CheckCircle2 className="w-12 h-12 text-green-400 animate-bounce" />
                 <h3 className="text-sm font-black tracking-wide uppercase text-green-400">
-                  Update Successful!
+                  Download Successful!
                 </h3>
                 <p className="text-xs text-gray-400">
-                  Plus Launcher is now updated and fully integrated into your environment!
+                  Plus Launcher is now downloaded and fully integrated into your environment!
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-xs text-gray-400">
                   <span className="font-bold flex items-center gap-1.5 uppercase tracking-wide text-blue-400 animate-pulse">
-                    Updating Launcher...
+                    Downloading Launcher...
                   </span>
                   <span className="font-mono text-[10px] bg-white/5 px-2 py-0.5 rounded border border-white/10 text-white">
                     {installProgress}%
