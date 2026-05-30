@@ -31,6 +31,8 @@ interface SettingsModalProps {
   onChangeAppName?: (name: string) => void;
   language?: string;
   onChangeLanguage?: (lang: string) => void;
+  wallpaper?: string;
+  onChangeWallpaper?: (url: string) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -56,6 +58,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onChangeAppName,
   language = "en",
   onChangeLanguage,
+  wallpaper,
+  onChangeWallpaper,
 }) => {
   const [adminPin, setAdminPin] = React.useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = React.useState(false);
@@ -73,7 +77,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   });
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const wallpaperInputRef = React.useRef<HTMLInputElement>(null);
   const [iconUploadSuccess, setIconUploadSuccess] = React.useState(false);
+  const [wallpaperUploadSuccess, setWallpaperUploadSuccess] = React.useState(false);
 
   const handleSendFeedback = () => {
     if (!feedback.trim()) return;
@@ -426,6 +432,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       {iconUploadSuccess
                         ? "Upload Successful!"
                         : t(language, "changeAppIcon", "Change Launcher Logo")}
+                    </button>
+                    <input
+                      type="file"
+                      ref={wallpaperInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            if (
+                              typeof reader.result === "string" &&
+                              onChangeWallpaper
+                            ) {
+                              onChangeWallpaper(reader.result);
+                              setWallpaperUploadSuccess(true);
+                              setTimeout(
+                                () => setWallpaperUploadSuccess(false),
+                                3000,
+                              );
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        wallpaperInputRef.current?.click();
+                      }}
+                      className={`col-span-2 py-2 border text-white shadow-lg rounded-lg text-[10px] font-bold uppercase transition-colors ${wallpaperUploadSuccess ? "bg-green-600 border-green-500/50 hover:bg-green-500 shadow-green-900/20" : "bg-purple-600 border-purple-500/50 hover:bg-purple-500 shadow-purple-900/20"}`}
+                    >
+                      {wallpaperUploadSuccess
+                        ? "Upload Successful!"
+                        : t(language, "changeWallpaper", "Change Wallpaper")}
                     </button>
                     <button
                       onClick={() => {

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import Clock from './Clock';
 // Add MailIcon to the imports
 import { LockIcon, ShieldCheckIcon, FingerprintIcon, FaceIdIcon, MailIcon } from './Icons';
@@ -32,6 +33,7 @@ const LockScreen: React.FC<LockScreenProps> = ({
   const [setupAnswer, setSetupAnswer] = useState('');
   const [error, setError] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -310,10 +312,22 @@ const LockScreen: React.FC<LockScreenProps> = ({
             {/* PIN Pad */}
             {!isFingerprintSetup && !isFaceIdSetup && !isScanning && !isVerifying && (
                 <div className="flex flex-col items-center gap-4 w-full mt-4">
-                    <div className="flex justify-center gap-3 h-4">
-                        {Array.from({ length: Math.max(input.length, 4) }).map((_, i) => (
-                            <div key={i} className={`w-3 h-3 rounded-full border transition-all ${i < input.length ? 'bg-blue-500 border-blue-500 scale-110 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'border-white/10 bg-transparent'}`} />
-                        ))}
+                    <div className="flex justify-center items-center gap-3 h-6 w-full relative">
+                        <div className="flex gap-3 justify-center items-center">
+                            {Array.from({ length: Math.max(input.length, 4) }).map((_, i) => (
+                                i < input.length && showPin ? (
+                                    <span key={i} className="text-white text-xl font-bold w-3 flex justify-center">{input[i]}</span>
+                                ) : (
+                                    <div key={i} className={`w-3 h-3 rounded-full border transition-all ${i < input.length ? 'bg-blue-500 border-blue-500 scale-110 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'border-white/10 bg-transparent'}`} />
+                                )
+                            ))}
+                        </div>
+                        <button 
+                            onClick={() => setShowPin(!showPin)} 
+                            className="absolute right-0 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                        >
+                            {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                     </div>
                     <div className="grid grid-cols-3 gap-1 w-full max-w-[180px]">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (

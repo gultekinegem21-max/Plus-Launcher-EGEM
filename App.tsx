@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import Header from "./components/Header";
@@ -69,6 +70,8 @@ export default function App() {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showLastPassword, setShowLastPassword] = useState(false);
   const [currentUser, setCurrentUser] = useState<string | null>(() =>
     localStorage.getItem("plus-launcher-user") || sessionStorage.getItem("plus-launcher-user"),
   );
@@ -531,7 +534,11 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-950 via-gray-950 to-purple-950 flex flex-col items-center justify-center p-6 selection:bg-blue-500/30">
+      <div 
+        className={`min-h-screen ${settings.wallpaper ? 'bg-black' : 'bg-gradient-to-b from-blue-950 via-gray-950 to-purple-950'} flex flex-col items-center justify-center p-6 selection:bg-blue-500/30 bg-cover bg-center bg-no-repeat`}
+        style={settings.wallpaper ? { backgroundImage: `url(${settings.wallpaper})` } : {}}
+      >
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-gray-900/0 to-purple-950/20 pointer-events-none" />
         <div className="bg-white/5 p-8 rounded-3xl border border-white/10 text-center space-y-8 max-w-sm w-full backdrop-blur-2xl shadow-2xl relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto border border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.15)] relative">
@@ -647,22 +654,36 @@ export default function App() {
                 <div className="flex items-center group relative border-b border-white/5 transition-all focus-within:bg-blue-500/5">
                   <input
                     name="lastPassword"
-                    type="password"
+                    type={showLastPassword ? "text" : "password"}
                     placeholder="Last Password You Remember..."
-                    className="flex-1 bg-transparent py-4 px-5 text-white text-sm focus:outline-none font-medium"
+                    className="flex-1 bg-transparent py-4 px-5 pr-10 text-white text-sm focus:outline-none font-medium"
                     required
                   />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowLastPassword(!showLastPassword)}
+                    className="absolute right-4 text-gray-400 hover:text-white"
+                  >
+                    {showLastPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               )}
 
               <div className="flex items-center group relative transition-all focus-within:bg-blue-500/5">
                 <input
                   name="password"
-                  type="password"
+                  type={showLoginPassword ? "text" : "password"}
                   placeholder={isForgotPassword ? "New Password..." : "Password..."}
-                  className="flex-1 bg-transparent py-4 px-5 text-white text-sm focus:outline-none font-medium"
+                  className="flex-1 bg-transparent py-4 px-5 pr-10 text-white text-sm focus:outline-none font-medium"
                   required
                 />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                     className="absolute right-4 text-gray-400 hover:text-white"
+                  >
+                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
               </div>
             </div>
             
@@ -716,9 +737,19 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-950 via-gray-900 to-purple-950 p-6 md:p-12 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse-bg" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse-bg animation-delay-4000" />
+    <div 
+      className={`min-h-screen ${settings.wallpaper ? 'bg-black' : 'bg-gradient-to-b from-blue-950 via-gray-900 to-purple-950'} p-6 md:p-12 font-sans selection:bg-blue-500/30 overflow-x-hidden relative bg-cover bg-center bg-no-repeat bg-fixed`}
+      style={settings.wallpaper ? { backgroundImage: `url(${settings.wallpaper})` } : {}}
+    >
+      {settings.wallpaper && (
+        <div className="fixed inset-0 bg-black/40 pointer-events-none backdrop-blur-sm" />
+      )}
+      {!settings.wallpaper && (
+        <>
+          <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse-bg" />
+          <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse-bg animation-delay-4000" />
+        </>
+      )}
 
       {isLocked && (
         <LockScreen
@@ -876,6 +907,8 @@ export default function App() {
         onChangeAppName={(name) => saveSettings({ ...settings, appName: name })}
         language={settings.language}
         onChangeLanguage={(lang) => saveSettings({ ...settings, language: lang })}
+        wallpaper={settings.wallpaper}
+        onChangeWallpaper={(url) => saveSettings({ ...settings, wallpaper: url })}
       />
 
       {currentUser && !isLocked && (

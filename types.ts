@@ -30,4 +30,5 @@ export interface LauncherSettings {
   appName?: string;
   deletedApps?: string[];
   language?: string;
+  wallpaper?: string;
 }
