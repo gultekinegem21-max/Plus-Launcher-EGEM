@@ -9,7 +9,6 @@ import AppCard from "./components/AppCard";
 import AddAppModal from "./components/AddAppModal";
 import LockScreen from "./components/LockScreen";
 import SettingsModal from "./components/SettingsModal";
-import InstallPrompt from "./components/InstallPrompt";
 import type { AppItem, StoredApp, LauncherSettings } from "./types";
 import {
   MailIcon,
@@ -105,17 +104,6 @@ export default function App() {
   useEffect(() => {
     document.title = settings.appName || "Plus+Launcher";
   }, [settings.appName]);
-
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-
-  useEffect(() => {
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall as any);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall as any);
-  }, []);
 
   useEffect(() => {
     if (settings.appIcon || settings.appName) {
@@ -910,13 +898,6 @@ export default function App() {
         wallpaper={settings.wallpaper}
         onChangeWallpaper={(url) => saveSettings({ ...settings, wallpaper: url })}
       />
-
-      {currentUser && !isLocked && (
-        <InstallPrompt
-          appIcon={settings.appIcon}
-          deferredPrompt={deferredPrompt}
-        />
-      )}
     </div>
   );
 }
