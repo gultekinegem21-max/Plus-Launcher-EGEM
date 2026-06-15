@@ -8,6 +8,7 @@ export interface AppItem {
   color: string;
   action: () => void;
   isCustom?: boolean;
+  url?: string;
 }
 
 export interface StoredApp {

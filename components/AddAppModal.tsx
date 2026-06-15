@@ -7,12 +7,13 @@ interface AddAppModalProps {
   onClose: () => void;
   onSave: (app: StoredApp) => void;
   appToEdit: StoredApp | null;
+  onDelete?: (id: string) => void;
 }
 
 const colors = ['#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#22c55e', '#64748b', '#f59e0b', '#06b6d4', '#d946ef', '#14b8a6'];
 const iconNames = Object.keys(iconMap).filter(name => !['PencilIcon', 'TrashIcon'].includes(name));
 
-const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, appToEdit }) => {
+const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, appToEdit, onDelete }) => {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(iconNames[0]);
@@ -21,6 +22,13 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, appT
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
 
   const isEditing = !!appToEdit;
+
+  const handleDelete = () => {
+    if (appToEdit && onDelete) {
+      onDelete(appToEdit.id);
+      onClose();
+    }
+  };
 
   // Debounce favicon fetching
   useEffect(() => {
@@ -193,9 +201,32 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, appT
             </div>
           </div>
           <div className="pt-2">
-            <button type="submit" disabled={!name.trim() || !url.trim()} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed">
-              {isEditing ? 'Save Changes' : 'Add App'}
-            </button>
+            {isEditing ? (
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="flex-1 bg-red-600/10 hover:bg-red-600/25 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 font-bold py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500"
+                >
+                  Delete App
+                </button>
+                <button
+                  type="submit"
+                  disabled={!name.trim() || !url.trim()}
+                  className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                  Save Changes
+                </button>
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={!name.trim() || !url.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
+              >
+                Add App
+              </button>
+            )}
           </div>
         </form>
       </div>

@@ -38,18 +38,21 @@ const AppCard: React.FC<AppCardProps> = ({ app, isEditMode, onEdit, onDelete }) 
           <Icon className="h-8 w-8 sm:h-11 sm:w-11 transition-transform duration-300 group-hover:scale-110" style={{ color: app.color }} />
         </div>
         <span className="mt-2 text-[11px] sm:text-xs font-medium text-gray-400 group-hover:text-white transition-colors duration-300 text-center truncate w-full px-1">{app.name}</span>
+        {app.url && (
+          <span className="text-[9px] text-gray-500 group-hover:text-gray-300 transition-colors duration-300 text-center truncate w-full px-1 opacity-80 mt-0.5">
+            {app.url.replace(/^https?:\/\/(www\.)?/, '')}
+          </span>
+        )}
       </button>
       {isEditMode && app.id !== 'launcher-settings' && (
         <div className="absolute -top-2 -right-2 flex gap-1 p-1 z-10">
-          {app.isCustom && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-              className="p-2 bg-gray-800 border border-gray-600 rounded-full text-blue-400 hover:text-white hover:bg-blue-600 transition-colors shadow-lg"
-              aria-label={`Edit ${app.name}`}
-            >
-              <PencilIcon className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            className="p-2 bg-gray-800 border border-gray-600 rounded-full text-blue-400 hover:text-white hover:bg-blue-600 transition-colors shadow-lg"
+            aria-label={`Edit ${app.name}`}
+          >
+            <PencilIcon className="h-4 w-4" />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
             className="p-2 bg-gray-800 border border-gray-600 rounded-full text-red-400 hover:text-white hover:bg-red-600 transition-colors shadow-lg"

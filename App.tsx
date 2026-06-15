@@ -1,8 +1,55 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import Header from "./components/Header";
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 import Clock from "./components/Clock";
 import SearchBar from "./components/SearchBar";
 import AppCard from "./components/AppCard";
@@ -32,10 +79,18 @@ import {
 const LOCAL_STORAGE_KEY = "plus-launcher-custom-apps";
 const SETTINGS_KEY = "plus-launcher-settings";
 
-const UrlIcon: React.FC<{ src: string; name: string; className?: string }> = ({
+const UrlIcon: React.FC<{
+  src: string;
+  name: string;
+  className?: string;
+  style?: React.CSSProperties;
+  fallback?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+}> = ({
   src,
   name,
   className,
+  style,
+  fallback: Fallback = LinkIcon,
 }) => {
   const [hasError, setHasError] = useState(false);
 
@@ -44,14 +99,16 @@ const UrlIcon: React.FC<{ src: string; name: string; className?: string }> = ({
   }, [src]);
 
   if (hasError || !src) {
-    return <LinkIcon className={className} />;
+    return <Fallback className={className} style={style} />;
   }
 
   return (
     <img
       src={src}
       alt={name}
-      className={`${className} object-cover rounded-md`}
+      className={`${className} object-contain rounded-md`}
+      style={style}
+      referrerPolicy="no-referrer"
       onError={() => setHasError(true)}
     />
   );
@@ -201,6 +258,17 @@ export default function App() {
 
   const [customApps, setCustomApps] = useState<StoredApp[]>([]);
   const [editingApp, setEditingApp] = useState<StoredApp | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
 
   const loadApps = () => {
     try {
@@ -224,33 +292,63 @@ export default function App() {
   };
 
   const saveSettings = (newSettings: LauncherSettings) => {
+    const updates: any = {};
+    let hasUpdates = false;
+
     if (newSettings.appIcon !== settings.appIcon) {
-      setDoc(doc(db, "globals", "settings"), { appIcon: newSettings.appIcon }, { merge: true }).catch(console.error);
+      updates.appIcon = newSettings.appIcon || null;
+      hasUpdates = true;
+    }
+    if (newSettings.appName !== settings.appName) {
+      updates.appName = newSettings.appName || "";
+      hasUpdates = true;
+    }
+
+    if (hasUpdates) {
+      setDoc(doc(db, "globals", "settings"), updates, { merge: true }).catch((error) => {
+        handleFirestoreError(error, OperationType.WRITE, "globals/settings");
+      });
     }
     setSettings(newSettings);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
   };
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "globals", "settings"), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.appIcon) {
+    const unsub = onSnapshot(
+      doc(db, "globals", "settings"),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
           setSettings((prev) => {
-            if (prev.appIcon === data.appIcon) return prev;
-            const newSettings = { ...prev, appIcon: data.appIcon };
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-            return newSettings;
+            let changed = false;
+            const updated = { ...prev };
+            if (data.appIcon !== undefined && data.appIcon !== prev.appIcon) {
+              updated.appIcon = data.appIcon;
+              changed = true;
+            }
+            if (data.appName !== undefined && data.appName !== prev.appName) {
+              updated.appName = data.appName;
+              changed = true;
+            }
+            if (changed) {
+              localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+              return updated;
+            }
+            return prev;
           });
         }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, "globals/settings");
       }
-    });
+    );
     return unsub;
   }, []);
 
   const handleSaveApp = (app: StoredApp) => {
     let newApps;
-    if (editingApp) {
+    const exists = customApps.some((a) => a.id === app.id);
+    if (exists) {
       newApps = customApps.map((a) => (a.id === app.id ? app : a));
     } else {
       newApps = [...customApps, app];
@@ -262,18 +360,25 @@ export default function App() {
 
   const handleDeleteApp = (id: string) => {
     if (id === "launcher-settings") return;
-    if (confirm("Are you sure you want to delete this app?")) {
-      const isDefault = defaultApps.some(app => app.id === id);
-      if (isDefault) {
-        saveSettings({
-          ...settings,
-          deletedApps: [...(settings.deletedApps || []), id],
-        });
-      } else {
-        const newApps = customApps.filter((app) => app.id !== id);
-        saveApps(newApps);
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete App",
+      description: "Are you sure you want to delete this app?",
+      onConfirm: () => {
+        const isDefault = defaultApps.some(app => app.id === id);
+        if (isDefault) {
+          saveSettings({
+            ...settings,
+            deletedApps: [...(settings.deletedApps || []), id],
+          });
+          const newApps = customApps.filter((app) => app.id !== id);
+          saveApps(newApps);
+        } else {
+          const newApps = customApps.filter((app) => app.id !== id);
+          saveApps(newApps);
+        }
       }
-    }
+    });
   };
 
   const handleUnlockAttempt = (attempt: string): boolean => {
@@ -378,18 +483,23 @@ export default function App() {
 
   const togglePasswordFeature = () => {
     if (settings.passwordEnabled) {
-      if (confirm("Disable all security features (PIN, Biometrics)?")) {
-        saveSettings({
-          ...settings,
-          passwordEnabled: false,
-          passwordHash: "",
-          fingerprintEnabled: false,
-          faceIdEnabled: false,
-          faceIdReference: undefined,
-          recoveryQuestion: undefined,
-          recoveryAnswerHash: undefined,
-        });
-      }
+      setConfirmDialog({
+        isOpen: true,
+        title: "Disable Security",
+        description: "Are you sure you want to disable all security features (PIN, Biometrics)?",
+        onConfirm: () => {
+          saveSettings({
+            ...settings,
+            passwordEnabled: false,
+            passwordHash: "",
+            fingerprintEnabled: false,
+            faceIdEnabled: false,
+            faceIdReference: undefined,
+            recoveryQuestion: undefined,
+            recoveryAnswerHash: undefined,
+          });
+        }
+      });
     } else {
       setIsLockSetupOpen(true);
     }
@@ -419,55 +529,31 @@ export default function App() {
     {
       id: "chrome",
       name: "Chrome",
-      icon: BrowserIcon,
+      icon: ({ className, style }) => (
+        <UrlIcon
+          src="https://img.icons8.com/color/512/chrome.png"
+          name="Chrome"
+          className={className}
+          style={style}
+          fallback={BrowserIcon}
+        />
+      ),
       color: "#2563eb",
       action: () => window.open("https://www.google.com", "_blank"),
       isCustom: false,
     },
     {
-      id: "roblox",
-      name: "Roblox",
-      icon: GameIcon,
-      color: "#ef4444",
-      action: () => window.open("https://www.roblox.com", "_blank"),
-      isCustom: false,
-    },
-    {
-      id: "minecraft",
-      name: "Minecraft",
-      icon: GameIcon,
-      color: "#10b981",
-      action: () => window.open("https://www.minecraft.net", "_blank"),
-      isCustom: false,
-    },
-    {
-      id: "playstore",
-      name: "Google Play",
-      icon: PlayStoreIcon,
-      color: "#0ea5e9",
-      action: () => window.open("https://play.google.com", "_blank"),
-      isCustom: false,
-    },
-    {
-      id: "applestore",
-      name: "App Store",
-      icon: AppleAppStoreIcon,
-      color: "#3b82f6",
-      action: () => window.open("https://www.apple.com/app-store/", "_blank"),
-      isCustom: false,
-    },
-    {
-      id: "microsoftstore",
-      name: "Microsoft Store",
-      icon: MicrosoftStoreIcon,
-      color: "#06b6d4",
-      action: () => window.open("https://apps.microsoft.com/", "_blank"),
-      isCustom: false,
-    },
-    {
       id: "colab",
       name: "Google Colab",
-      icon: CodeIcon,
+      icon: ({ className, style }) => (
+        <UrlIcon
+          src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Colaboratory_SVG_Logo.svg"
+          name="Google Colab"
+          className={className}
+          style={style}
+          fallback={CodeIcon}
+        />
+      ),
       color: "#f97316",
       action: () => window.open("https://colab.research.google.com/", "_blank"),
       isCustom: false,
@@ -475,7 +561,15 @@ export default function App() {
     {
       id: "photos",
       name: "Photos",
-      icon: PhotosIcon,
+      icon: ({ className, style }) => (
+        <UrlIcon
+          src="https://img.icons8.com/color/512/google-photos.png"
+          name="Photos"
+          className={className}
+          style={style}
+          fallback={PhotosIcon}
+        />
+      ),
       color: "#ec4899",
       action: () => window.open("https://photos.google.com", "_blank"),
       isCustom: false,
@@ -511,10 +605,56 @@ export default function App() {
       color: app.color,
       action: () => window.open(app.url, "_blank"),
       isCustom: true,
+      url: app.url,
     };
   });
 
-  const allApps = [...defaultApps, ...mappedCustomApps];
+  const allApps = useMemo(() => {
+    const mergedDefaults = defaultApps.map((defApp) => {
+      const customOverride = customApps.find((cApp) => cApp.id === defApp.id);
+      if (customOverride) {
+        let IconComponent = LinkIcon;
+        if (customOverride.iconIdentifier && iconMap[customOverride.iconIdentifier]) {
+          IconComponent = iconMap[customOverride.iconIdentifier];
+        } else if (customOverride.iconIdentifier && customOverride.iconIdentifier.startsWith("http")) {
+          IconComponent = ({ className }) => (
+            <UrlIcon
+              src={customOverride.iconIdentifier}
+              name={customOverride.name}
+              className={className}
+            />
+          );
+        }
+
+        return {
+          id: defApp.id,
+          name: customOverride.name,
+          icon: IconComponent,
+          color: customOverride.color,
+          action: () => window.open(customOverride.url, "_blank"),
+          isCustom: false,
+          url: customOverride.url,
+        };
+      }
+
+      let defaultUrl = "";
+      if (defApp.id === "chrome") defaultUrl = "https://www.google.com";
+      else if (defApp.id === "colab") defaultUrl = "https://colab.research.google.com/";
+      else if (defApp.id === "photos") defaultUrl = "https://photos.google.com";
+
+      return {
+        ...defApp,
+        url: defaultUrl || undefined,
+      };
+    });
+
+    const extraCustomApps = mappedCustomApps.filter(
+      (customApp) => !defaultApps.some((defApp) => defApp.id === customApp.id)
+    );
+
+    return [...mergedDefaults, ...extraCustomApps];
+  }, [defaultApps, customApps, mappedCustomApps]);
+
   const filteredApps = allApps.filter((app) =>
     !settings.deletedApps?.includes(app.id) &&
     app.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -806,7 +946,30 @@ export default function App() {
               app={app}
               isEditMode={isEditMode}
               onEdit={() => {
-                const stored = customApps.find((a) => a.id === app.id);
+                let stored = customApps.find((a) => a.id === app.id);
+                if (!stored && app.id !== 'launcher-settings') {
+                  let defaultUrl = "";
+                  let defaultIcon = "LinkIcon";
+                  if (app.id === "chrome") {
+                    defaultUrl = "https://www.google.com";
+                    defaultIcon = "BrowserIcon";
+                  } else if (app.id === "colab") {
+                    defaultUrl = "https://colab.research.google.com/";
+                    defaultIcon = "CodeIcon";
+                  } else if (app.id === "photos") {
+                    defaultUrl = "https://photos.google.com";
+                    defaultIcon = "PhotosIcon";
+                  }
+
+                  stored = {
+                    id: app.id,
+                    name: app.name,
+                    url: defaultUrl,
+                    iconIdentifier: defaultIcon,
+                    color: app.color,
+                  };
+                }
+
                 if (stored) {
                   setEditingApp(stored);
                   setIsModalOpen(true);
@@ -849,7 +1012,44 @@ export default function App() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveApp}
         appToEdit={editingApp}
+        onDelete={handleDeleteApp}
       />
+
+      {/* Custom Confirmation Modal */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+          <div 
+            className="bg-gray-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-white mb-2">{confirmDialog.title}</h3>
+            <p className="text-gray-300 text-sm mb-6">{confirmDialog.description}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors text-sm font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }}
+                className={`px-4 py-2 rounded-lg text-white transition-colors text-sm font-semibold cursor-pointer ${
+                  confirmDialog.title.includes("Delete")
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -876,6 +1076,38 @@ export default function App() {
         }}
         currentUser={currentUser}
         onLogout={() => {
+          localStorage.removeItem("plus-launcher-user");
+          sessionStorage.removeItem("plus-launcher-user");
+          setCurrentUser(null);
+          setIsSettingsOpen(false);
+        }}
+        onDeleteAccount={() => {
+          if (currentUser) {
+            const accountsStr = localStorage.getItem("plus-launcher-accounts") || "{}";
+            const accounts = JSON.parse(accountsStr);
+            delete accounts[currentUser];
+            localStorage.setItem("plus-launcher-accounts", JSON.stringify(accounts));
+            
+            localStorage.removeItem("plus-launcher-user");
+            sessionStorage.removeItem("plus-launcher-user");
+            setCurrentUser(null);
+            setIsSettingsOpen(false);
+          }
+        }}
+        onResetLauncher={() => {
+          saveApps([]);
+          const defaults: LauncherSettings = {
+            passwordEnabled: false,
+            passwordHash: "",
+            fingerprintEnabled: false,
+            faceIdEnabled: false,
+            appIcon: undefined,
+            appName: "Plus+Launcher",
+            deletedApps: [],
+            language: "en",
+            wallpaper: undefined,
+          };
+          saveSettings(defaults);
           localStorage.removeItem("plus-launcher-user");
           sessionStorage.removeItem("plus-launcher-user");
           setCurrentUser(null);

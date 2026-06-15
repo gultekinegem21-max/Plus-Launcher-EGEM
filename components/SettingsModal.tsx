@@ -24,6 +24,7 @@ interface SettingsModalProps {
   onAddApp?: () => void;
   currentUser?: string | null;
   onLogout?: () => void;
+  onDeleteAccount?: () => void;
   onLogin?: (username: string, remember: boolean) => void;
   appIcon?: string;
   onChangeAppIcon?: (url: string) => void;
@@ -33,6 +34,7 @@ interface SettingsModalProps {
   onChangeLanguage?: (lang: string) => void;
   wallpaper?: string;
   onChangeWallpaper?: (url: string) => void;
+  onResetLauncher?: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -51,6 +53,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onAddApp,
   currentUser,
   onLogout,
+  onDeleteAccount,
   onLogin,
   appIcon,
   onChangeAppIcon,
@@ -60,6 +63,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onChangeLanguage,
   wallpaper,
   onChangeWallpaper,
+  onResetLauncher,
 }) => {
   const [adminPin, setAdminPin] = React.useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = React.useState(false);
@@ -76,10 +80,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       return [];
     }
   });
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const wallpaperInputRef = React.useRef<HTMLInputElement>(null);
-  const [iconUploadSuccess, setIconUploadSuccess] = React.useState(false);
   const [wallpaperUploadSuccess, setWallpaperUploadSuccess] = React.useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = React.useState(false);
+  const [showConfirmReset, setShowConfirmReset] = React.useState(false);
 
   const handleSendFeedback = () => {
     if (!feedback.trim()) return;
@@ -102,6 +106,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!isOpen) {
       setIsAdminUnlocked(false);
       setAdminPin("");
+      setShowConfirmDelete(false);
+      setShowConfirmReset(false);
     }
   }, [isOpen]);
 
@@ -136,22 +142,56 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-3">
             <p className="text-white text-xs font-medium">Account Settings</p>
             {currentUser ? (
-              <div className="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-gray-700/50">
-                <div className="space-y-0.5">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                    Active Account
-                  </p>
-                  <p className="text-sm font-medium text-white truncate max-w-[150px]">
-                    {currentUser}
-                  </p>
+              <div className="flex flex-col gap-3 bg-black/20 p-3 rounded-xl border border-gray-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      Active Account
+                    </p>
+                    <p className="text-sm font-medium text-white truncate max-w-[150px]">
+                      {currentUser}
+                    </p>
+                  </div>
+                  {onLogout && (
+                    <button
+                      onClick={onLogout}
+                      className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded border border-red-500/20 text-[10px] font-bold uppercase transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  )}
                 </div>
-                {onLogout && (
+
+                {!showConfirmDelete ? (
                   <button
-                    onClick={onLogout}
-                    className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded border border-red-500/20 text-[10px] font-bold uppercase transition-colors"
+                    onClick={() => setShowConfirmDelete(true)}
+                    className="w-full bg-red-600/10 hover:bg-red-600/20 text-red-400 py-1.5 border border-red-600/20 hover:border-red-600/40 rounded text-[10px] font-bold uppercase transition-all tracking-wider text-center"
                   >
-                    Sign Out
+                    Delete Account
                   </button>
+                ) : (
+                  <div className="flex flex-col gap-2 pt-1 border-t border-gray-800/60 animate-in fade-in duration-200">
+                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider text-center leading-normal">
+                      Are you sure? This will delete your local account credentials and log you out.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          if (onDeleteAccount) onDeleteAccount();
+                          setShowConfirmDelete(false);
+                        }}
+                        className="bg-red-600 hover:bg-red-500 text-white py-1.5 rounded text-[10px] font-bold uppercase transition-colors"
+                      >
+                        Yes, Delete
+                      </button>
+                      <button
+                        onClick={() => setShowConfirmDelete(false)}
+                        className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-1.5 rounded text-[10px] font-bold uppercase transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             ) : (
@@ -218,6 +258,79 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value="de">Deutsch</option>
             </select>
           </div>
+
+          <div className="pt-1">
+            <input
+              type="file"
+              ref={wallpaperInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    if (
+                      typeof reader.result === "string" &&
+                      onChangeWallpaper
+                    ) {
+                      onChangeWallpaper(reader.result);
+                      setWallpaperUploadSuccess(true);
+                      setTimeout(
+                        () => setWallpaperUploadSuccess(false),
+                        3000,
+                      );
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+            <button
+              id="change-wallpaper-button"
+              onClick={() => {
+                wallpaperInputRef.current?.click();
+              }}
+              className={`w-full py-2 border text-white shadow-lg rounded-lg text-[10px] font-bold uppercase transition-colors ${wallpaperUploadSuccess ? "bg-green-600 border-green-500/50 hover:bg-green-500 shadow-green-900/20" : "bg-purple-600 border-purple-500/50 hover:bg-purple-500 shadow-purple-900/20"}`}
+            >
+              {wallpaperUploadSuccess
+                ? "Upload Successful!"
+                : t(language, "changeWallpaper", "Change Wallpaper")}
+            </button>
+          </div>
+
+          {!showConfirmReset ? (
+            <button
+              id="reset-launcher-button"
+              onClick={() => setShowConfirmReset(true)}
+              className="w-full py-2 bg-red-600/10 hover:bg-red-600/25 text-red-400 border border-red-600/20 hover:border-red-600/40 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-center"
+            >
+              Reset Launcher
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2 bg-red-950/10 border border-red-900/30 p-2.5 rounded-lg animate-in fade-in duration-200">
+              <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider text-center leading-normal">
+                Reset launcher: all custom apps will be removed, default wallpaper and state restored, and you will sign out.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    if (onResetLauncher) onResetLauncher();
+                    setShowConfirmReset(false);
+                  }}
+                  className="bg-red-600 hover:bg-red-500 text-white py-1.5 rounded text-[10px] font-bold uppercase transition-colors"
+                >
+                  Yes, Reset
+                </button>
+                <button
+                  onClick={() => setShowConfirmReset(false)}
+                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-1.5 rounded text-[10px] font-bold uppercase transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="h-px bg-gray-700" />
 
@@ -382,93 +495,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3 animate-in fade-in zoom-in-95">
-                  <div className="flex flex-col gap-2 mt-2">
-                    <label className="text-white text-[10px] font-bold uppercase tracking-widest pl-1">
-                      {t(language, "changeAppName", "Change App Name")}
-                    </label>
-                    <input
-                      type="text"
-                      value={appName || ""}
-                      onChange={(e) =>
-                        onChangeAppName && onChangeAppName(e.target.value)
-                      }
-                      placeholder="Plus+Launcher"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500/50 transition-colors"
-                    />
-                  </div>
+
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            if (
-                              typeof reader.result === "string" &&
-                              onChangeAppIcon
-                            ) {
-                              onChangeAppIcon(reader.result);
-                              setIconUploadSuccess(true);
-                              setTimeout(
-                                () => setIconUploadSuccess(false),
-                                3000,
-                              );
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        fileInputRef.current?.click();
-                      }}
-                      className={`col-span-2 py-2 border text-white shadow-lg rounded-lg text-[10px] font-bold uppercase transition-colors ${iconUploadSuccess ? "bg-green-600 border-green-500/50 hover:bg-green-500 shadow-green-900/20" : "bg-amber-600 border-amber-500/50 hover:bg-amber-500 shadow-amber-900/20"}`}
-                    >
-                      {iconUploadSuccess
-                        ? "Upload Successful!"
-                        : t(language, "changeAppIcon", "Change Launcher Logo")}
-                    </button>
-                    <input
-                      type="file"
-                      ref={wallpaperInputRef}
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            if (
-                              typeof reader.result === "string" &&
-                              onChangeWallpaper
-                            ) {
-                              onChangeWallpaper(reader.result);
-                              setWallpaperUploadSuccess(true);
-                              setTimeout(
-                                () => setWallpaperUploadSuccess(false),
-                                3000,
-                              );
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        wallpaperInputRef.current?.click();
-                      }}
-                      className={`col-span-2 py-2 border text-white shadow-lg rounded-lg text-[10px] font-bold uppercase transition-colors ${wallpaperUploadSuccess ? "bg-green-600 border-green-500/50 hover:bg-green-500 shadow-green-900/20" : "bg-purple-600 border-purple-500/50 hover:bg-purple-500 shadow-purple-900/20"}`}
-                    >
-                      {wallpaperUploadSuccess
-                        ? "Upload Successful!"
-                        : t(language, "changeWallpaper", "Change Wallpaper")}
-                    </button>
                     <button
                       onClick={() => {
                         onClose();
