@@ -99,7 +99,7 @@ const UrlIcon: React.FC<{
   }, [src]);
 
   if (hasError || !src) {
-    return <Fallback className={className} style={style} />;
+    return <Fallback className={className} />;
   }
 
   return (
@@ -120,6 +120,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLockSetupOpen, setIsLockSetupOpen] = useState(false);
+  const [isPatternSetupOpen, setIsPatternSetupOpen] = useState(false);
   const [isFingerprintSetupOpen, setIsFingerprintSetupOpen] = useState(false);
   const [isFaceIdSetupOpen, setIsFaceIdSetupOpen] = useState(false);
   const [isRecoveryUpdateOpen, setIsRecoveryUpdateOpen] = useState(false);
@@ -247,7 +248,7 @@ export default function App() {
   const [isLocked, setIsLocked] = useState(() => {
     const user = localStorage.getItem("plus-launcher-user") || sessionStorage.getItem("plus-launcher-user");
     if (user === "Admin Plus+") return false;
-    return !!(settings.passwordEnabled && settings.passwordHash);
+    return !!((settings.passwordEnabled && settings.passwordHash) || (settings.patternEnabled && settings.patternHash));
   });
 
   useEffect(() => {
@@ -401,6 +402,8 @@ export default function App() {
         ...settings,
         passwordEnabled: false,
         passwordHash: "",
+        patternEnabled: false,
+        patternHash: "",
         fingerprintEnabled: false,
         faceIdEnabled: false,
         faceIdReference: undefined,
@@ -413,11 +416,36 @@ export default function App() {
     }
 
     const hashedAttempt = btoa(attempt);
-    if (hashedAttempt === settings.passwordHash) {
+    if (hashedAttempt === settings.passwordHash || hashedAttempt === settings.patternHash) {
       setIsLocked(false);
       return true;
     }
     return false;
+  };
+
+  const handleSetPattern = (
+    patternStr: string,
+    recoveryData?: { question: string; answer: string },
+  ): boolean => {
+    if (patternStr.split(',').length < 4) return false;
+    const hashed = btoa(patternStr);
+
+    const newSettings = {
+      ...settings,
+      patternEnabled: true,
+      patternHash: hashed,
+    };
+
+    if (recoveryData) {
+      newSettings.recoveryQuestion = recoveryData.question;
+      newSettings.recoveryAnswerHash = btoa(
+        recoveryData.answer.toLowerCase().trim(),
+      );
+    }
+
+    saveSettings(newSettings);
+    setIsPatternSetupOpen(false);
+    return true;
   };
 
   const handleSetPasscode = (
@@ -485,23 +513,53 @@ export default function App() {
     if (settings.passwordEnabled) {
       setConfirmDialog({
         isOpen: true,
-        title: "Disable Security",
-        description: "Are you sure you want to disable all security features (PIN, Biometrics)?",
+        title: "Disable PIN",
+        description: "Are you sure you want to disable PIN lock?",
         onConfirm: () => {
-          saveSettings({
+          const newSettings = {
             ...settings,
             passwordEnabled: false,
             passwordHash: "",
-            fingerprintEnabled: false,
-            faceIdEnabled: false,
-            faceIdReference: undefined,
-            recoveryQuestion: undefined,
-            recoveryAnswerHash: undefined,
-          });
+          };
+          if (!settings.patternEnabled) {
+            newSettings.fingerprintEnabled = false;
+            newSettings.faceIdEnabled = false;
+            newSettings.faceIdReference = undefined;
+            newSettings.recoveryQuestion = undefined;
+            newSettings.recoveryAnswerHash = undefined;
+          }
+          saveSettings(newSettings);
         }
       });
     } else {
       setIsLockSetupOpen(true);
+    }
+  };
+
+  const togglePatternFeature = () => {
+    if (settings.patternEnabled) {
+      setConfirmDialog({
+        isOpen: true,
+        title: "Disable Pattern",
+        description: "Are you sure you want to disable Pattern lock?",
+        onConfirm: () => {
+          const newSettings = {
+            ...settings,
+            patternEnabled: false,
+            patternHash: "",
+          };
+          if (!settings.passwordEnabled) {
+            newSettings.fingerprintEnabled = false;
+            newSettings.faceIdEnabled = false;
+            newSettings.faceIdReference = undefined;
+            newSettings.recoveryQuestion = undefined;
+            newSettings.recoveryAnswerHash = undefined;
+          }
+          saveSettings(newSettings);
+        }
+      });
+    } else {
+      setIsPatternSetupOpen(true);
     }
   };
 
@@ -884,6 +942,8 @@ export default function App() {
           onUnlock={handleUnlockAttempt}
           fingerprintEnabled={settings.fingerprintEnabled}
           faceIdEnabled={settings.faceIdEnabled}
+          patternEnabled={settings.patternEnabled}
+          passwordEnabled={settings.passwordEnabled}
           faceIdReference={settings.faceIdReference}
           recoveryQuestion={settings.recoveryQuestion}
           recoveryAnswerHash={settings.recoveryAnswerHash}
@@ -892,11 +952,15 @@ export default function App() {
       )}
 
       {isLockSetupOpen && (
-        <LockScreen onUnlock={handleSetPasscode} isSetup={true} appIcon={settings.appIcon} />
+        <LockScreen onUnlock={handleSetPasscode} onCancel={() => setIsLockSetupOpen(false)} isSetup={true} appIcon={settings.appIcon} />
+      )}
+      {isPatternSetupOpen && (
+        <LockScreen onUnlock={handleSetPattern} onCancel={() => setIsPatternSetupOpen(false)} isPatternSetup={true} appIcon={settings.appIcon} />
       )}
       {isFingerprintSetupOpen && (
         <LockScreen
           onUnlock={(at) => handleCompleteBiometricEnrollment(at)}
+          onCancel={() => setIsFingerprintSetupOpen(false)}
           isFingerprintSetup={true}
           appIcon={settings.appIcon}
         />
@@ -904,6 +968,7 @@ export default function App() {
       {isFaceIdSetupOpen && (
         <LockScreen
           onUnlock={(at, data) => handleCompleteBiometricEnrollment(at, data)}
+          onCancel={() => setIsFaceIdSetupOpen(false)}
           isFaceIdSetup={true}
           appIcon={settings.appIcon}
         />
@@ -1058,6 +1123,8 @@ export default function App() {
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         passwordEnabled={settings.passwordEnabled}
         onManagePassword={togglePasswordFeature}
+        patternEnabled={settings.patternEnabled}
+        onManagePattern={togglePatternFeature}
         onLock={() => {
           setIsSettingsOpen(false);
           setIsLocked(true);

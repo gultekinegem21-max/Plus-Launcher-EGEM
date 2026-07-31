@@ -5,16 +5,20 @@ import Clock from './Clock';
 // Add MailIcon to the imports
 import { LockIcon, ShieldCheckIcon, FingerprintIcon, FaceIdIcon, MailIcon } from './Icons';
 import { GoogleGenAI } from "@google/genai";
+import PatternLock from './PatternLock';
 
 interface LockScreenProps {
   onUnlock: (password: string, data?: any) => boolean;
   isSetup?: boolean;
+  isPatternSetup?: boolean;
   isFingerprintSetup?: boolean;
   isFaceIdSetup?: boolean;
   isRecoveryUpdate?: boolean;
   onCancel?: () => void;
   fingerprintEnabled?: boolean;
   faceIdEnabled?: boolean;
+  patternEnabled?: boolean;
+  passwordEnabled?: boolean;
   faceIdReference?: string;
   recoveryQuestion?: string;
   recoveryAnswerHash?: string;
@@ -22,7 +26,7 @@ interface LockScreenProps {
 }
 
 const LockScreen: React.FC<LockScreenProps> = ({ 
-    onUnlock, isSetup, isFingerprintSetup, isFaceIdSetup, isRecoveryUpdate, onCancel, fingerprintEnabled, faceIdEnabled, faceIdReference, recoveryQuestion, recoveryAnswerHash, appIcon
+    onUnlock, isSetup, isPatternSetup, isFingerprintSetup, isFaceIdSetup, isRecoveryUpdate, onCancel, fingerprintEnabled, faceIdEnabled, patternEnabled, passwordEnabled, faceIdReference, recoveryQuestion, recoveryAnswerHash, appIcon
 }) => {
   const [view, setView] = useState<'unlock' | 'recovery' | 'setup-recovery' | 'reset'>(
     isRecoveryUpdate ? 'setup-recovery' : 'unlock'
@@ -37,9 +41,13 @@ const LockScreen: React.FC<LockScreenProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const [analysisText, setAnalysisText] = useState('SECURE');
+  const [analysisText, setAnalysisText] = useState(isSetup || isPatternSetup ? 'SETUP' : 'SECURE');
   const [ready, setReady] = useState(false);
   
+  // Toggle between PIN and Pattern if both are somehow accessible, 
+  // but if we are in setup for pattern or pattern is enabled, default to it.
+  const [usePattern, setUsePattern] = useState(isPatternSetup || (patternEnabled && !isSetup));
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanTimerRef = useRef<number | null>(null);
@@ -166,6 +174,28 @@ const LockScreen: React.FC<LockScreenProps> = ({
     setError(false);
   };
 
+  const handlePatternComplete = (pattern: number[]) => {
+    const patternStr = pattern.join(',');
+    if (isSetup || isPatternSetup) {
+      // If setting up pattern, we assume onUnlock handles it for setup
+      const isValid = onUnlock(patternStr);
+      if (isValid) {
+          setSuccess(true);
+          setTimeout(() => setView('setup-recovery'), 500); // move to next step
+      } else {
+          setError(true);
+      }
+      return;
+    }
+    
+    // Normal unlock
+    const isValid = onUnlock(patternStr);
+    if (isValid) setSuccess(true);
+    else {
+      setError(true);
+    }
+  };
+
   const handleUnlock = () => {
     if (isSetup) {
       // If setting up, move to security question setup
@@ -275,79 +305,120 @@ const LockScreen: React.FC<LockScreenProps> = ({
           <>
             {/* Face ID Viewbox */}
             {(isFaceIdSetup || faceIdEnabled) && (
-                <div className={`relative w-24 h-24 rounded-full border-2 transition-colors duration-500 overflow-hidden bg-black mb-1 ${success ? 'border-green-500' : error ? 'border-red-500' : isVerifying ? 'border-amber-500' : 'border-white/10'}`}>
-                    <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline 
-                        muted 
-                        className={`w-full h-full object-cover transition-all duration-500 ${success ? 'grayscale-0 brightness-100' : 'grayscale brightness-125'}`} 
-                        onPlaying={() => {
-                            if (faceIdEnabled && !isFaceIdSetup && !isScanning && !isVerifying && !success && !error) {
-                                startFaceScan();
-                            }
-                        }}
-                    />
-                    
-                    {(isScanning || isVerifying) && (
-                        <div className="absolute inset-0 z-10 pointer-events-none">
-                            <div className={`w-full h-0.5 shadow-lg absolute top-0 left-0 animate-[face_1.5s_infinite_ease-in-out] ${isVerifying ? 'bg-amber-400 shadow-[0_0_15px_amber]' : 'bg-blue-400 shadow-[0_0_15px_blue]'}`} />
-                            <div className={`absolute inset-4 border-2 rounded-full animate-pulse ${isVerifying ? 'border-amber-400/30' : 'border-blue-400/30'}`} />
-                        </div>
-                    )}
-                    
-                    {isFaceIdSetup && !isScanning && !isVerifying && (
-                        <button onClick={startFaceScan} className="absolute inset-0 bg-blue-600/80 text-white text-[10px] font-bold uppercase flex flex-col items-center justify-center gap-1">
-                            <FaceIdIcon className="w-6 h-6" />
-                            Enroll Face
-                        </button>
-                    )}
-                    
-                    {faceIdEnabled && error && !isScanning && !isVerifying && (
-                        <button onClick={startFaceScan} className="absolute inset-0 bg-red-600/80 text-white text-[9px] font-bold uppercase flex items-center justify-center">Try Again</button>
-                    )}
-                </div>
+                <>
+                  <div className={`relative w-24 h-24 rounded-full border-2 transition-colors duration-500 overflow-hidden bg-black mb-1 ${success ? 'border-green-500' : error ? 'border-red-500' : isVerifying ? 'border-amber-500' : 'border-white/10'}`}>
+                      <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          playsInline 
+                          muted 
+                          className={`w-full h-full object-cover transition-all duration-500 ${success ? 'grayscale-0 brightness-100' : 'grayscale brightness-125'}`} 
+                          onPlaying={() => {
+                              if (faceIdEnabled && !isFaceIdSetup && !isScanning && !isVerifying && !success && !error) {
+                                  startFaceScan();
+                              }
+                          }}
+                      />
+                      
+                      {(isScanning || isVerifying) && (
+                          <div className="absolute inset-0 z-10 pointer-events-none">
+                              <div className={`w-full h-0.5 shadow-lg absolute top-0 left-0 animate-[face_1.5s_infinite_ease-in-out] ${isVerifying ? 'bg-amber-400 shadow-[0_0_15px_amber]' : 'bg-blue-400 shadow-[0_0_15px_blue]'}`} />
+                              <div className={`absolute inset-4 border-2 rounded-full animate-pulse ${isVerifying ? 'border-amber-400/30' : 'border-blue-400/30'}`} />
+                          </div>
+                      )}
+                      
+                      {isFaceIdSetup && !isScanning && !isVerifying && (
+                          <button onClick={startFaceScan} className="absolute inset-0 bg-blue-600/80 text-white text-[10px] font-bold uppercase flex flex-col items-center justify-center gap-1">
+                              <FaceIdIcon className="w-6 h-6" />
+                              Enroll Face
+                          </button>
+                      )}
+                      
+                      {faceIdEnabled && error && !isScanning && !isVerifying && (
+                          <button onClick={startFaceScan} className="absolute inset-0 bg-red-600/80 text-white text-[9px] font-bold uppercase flex items-center justify-center">Try Again</button>
+                      )}
+                  </div>
+                  {isFaceIdSetup && onCancel && (
+                    <div className="flex w-full justify-center items-center px-1 mt-2">
+                      <button 
+                        onClick={onCancel}
+                        className="text-[10px] text-gray-500 hover:text-gray-400 font-bold uppercase tracking-widest px-4 py-2"
+                      >
+                        Cancel Setup
+                      </button>
+                    </div>
+                  )}
+                </>
             )}
 
-            {/* PIN Pad */}
+            {/* Input Pad (PIN or Pattern) */}
             {!isFingerprintSetup && !isFaceIdSetup && !isScanning && !isVerifying && (
                 <div className="flex flex-col items-center gap-4 w-full mt-4">
-                    <div className="flex justify-center items-center gap-3 h-6 w-full relative">
-                        <div className="flex gap-3 justify-center items-center">
-                            {Array.from({ length: Math.max(input.length, 4) }).map((_, i) => (
-                                i < input.length && showPin ? (
-                                    <span key={i} className="text-white text-xl font-bold w-3 flex justify-center">{input[i]}</span>
-                                ) : (
-                                    <div key={i} className={`w-3 h-3 rounded-full border transition-all ${i < input.length ? 'bg-blue-500 border-blue-500 scale-110 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'border-white/10 bg-transparent'}`} />
-                                )
-                            ))}
-                        </div>
-                        <button 
-                            onClick={() => setShowPin(!showPin)} 
-                            className="absolute right-0 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                        >
-                            {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 w-full max-w-[180px]">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                            <button key={num} onClick={() => handleKeypad(num.toString())} className="aspect-square rounded-xl bg-white/5 text-white text-lg font-bold border border-white/5 active:bg-blue-600/30 transition-colors">{num}</button>
-                        ))}
-                        <button onClick={handleBackspace} className="aspect-square flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/40 active:text-white transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2.5} d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.37-6.37a2.25 2.25 0 010-3.18l6.37-6.37A2.25 2.25 0 0110.47 2.25h10.28c1.242 0 2.25 1.008 2.25 2.25v15a2.25 2.25 0 01-2.25 2.25H10.47a2.25 2.25 0 01-1.47-.58z" /></svg></button>
-                        <button onClick={() => handleKeypad('0')} className="aspect-square rounded-xl bg-white/5 text-white text-lg font-bold border border-white/5 active:bg-blue-600/30 transition-colors">0</button>
-                        <button onClick={handleUnlock} disabled={input.length < 4} className="aspect-square flex items-center justify-center rounded-xl bg-blue-600 text-white active:scale-95 disabled:opacity-5 transition-all shadow-lg shadow-blue-500/20"><svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg></button>
-                    </div>
-                    
-                    {!isSetup && (
-                      <div className="flex w-full justify-center items-center px-1 mt-6">
-                        <button 
-                          onClick={() => setView(recoveryQuestion ? 'recovery' : 'reset')}
-                          className="text-xs text-blue-500 hover:text-blue-400 font-bold uppercase tracking-widest px-4 py-2"
-                        >
-                          Forgot Password?
-                        </button>
+                  {usePattern ? (
+                    <PatternLock onComplete={handlePatternComplete} onStart={() => setError(false)} error={error} />
+                  ) : (
+                    <>
+                      <div className="flex justify-center items-center gap-3 h-6 w-full relative">
+                          <div className="flex gap-3 justify-center items-center">
+                              {Array.from({ length: Math.max(input.length, 4) }).map((_, i) => (
+                                  i < input.length && showPin ? (
+                                      <span key={i} className="text-white text-xl font-bold w-3 flex justify-center">{input[i]}</span>
+                                  ) : (
+                                      <div key={i} className={`w-3 h-3 rounded-full border transition-all ${i < input.length ? 'bg-blue-500 border-blue-500 scale-110 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'border-white/10 bg-transparent'}`} />
+                                  )
+                              ))}
+                          </div>
+                          <button 
+                              onClick={() => setShowPin(!showPin)} 
+                              className="absolute right-0 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                          >
+                              {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                       </div>
+                      <div className="grid grid-cols-3 gap-1 w-full max-w-[180px]">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                              <button key={num} onClick={() => handleKeypad(num.toString())} className="aspect-square rounded-xl bg-white/5 text-white text-lg font-bold border border-white/5 active:bg-blue-600/30 transition-colors">{num}</button>
+                          ))}
+                          <button onClick={handleBackspace} className="aspect-square flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/40 active:text-white transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2.5} d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.37-6.37a2.25 2.25 0 010-3.18l6.37-6.37A2.25 2.25 0 0110.47 2.25h10.28c1.242 0 2.25 1.008 2.25 2.25v15a2.25 2.25 0 01-2.25 2.25H10.47a2.25 2.25 0 01-1.47-.58z" /></svg></button>
+                          <button onClick={() => handleKeypad('0')} className="aspect-square rounded-xl bg-white/5 text-white text-lg font-bold border border-white/5 active:bg-blue-600/30 transition-colors">0</button>
+                          <button onClick={handleUnlock} disabled={input.length < 4} className="aspect-square flex items-center justify-center rounded-xl bg-blue-600 text-white active:scale-95 disabled:opacity-5 transition-all shadow-lg shadow-blue-500/20"><svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg></button>
+                      </div>
+                    </>
+                  )}
+                    
+                  <div className="flex w-full justify-center items-center px-1 mt-2">
+                    {/* Switch between PIN/Pattern if both are supported */}
+                    {!isSetup && !isPatternSetup && patternEnabled && passwordEnabled && (
+                      <button 
+                        onClick={() => setUsePattern(!usePattern)}
+                        className="text-[10px] text-gray-500 hover:text-gray-400 font-bold uppercase tracking-widest px-4 py-2"
+                      >
+                        {usePattern ? 'Use PIN' : 'Use Pattern'}
+                      </button>
                     )}
+                  </div>
+                    
+                  {!isSetup && !isPatternSetup && (
+                    <div className="flex w-full justify-center items-center px-1 mt-2">
+                      <button 
+                        onClick={() => setView(recoveryQuestion ? 'recovery' : 'reset')}
+                        className="text-xs text-blue-500 hover:text-blue-400 font-bold uppercase tracking-widest px-4 py-2"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
+                  
+                  {(isSetup || isPatternSetup) && onCancel && (
+                    <div className="flex w-full justify-center items-center px-1 mt-2">
+                      <button 
+                        onClick={onCancel}
+                        className="text-[10px] text-gray-500 hover:text-gray-400 font-bold uppercase tracking-widest px-4 py-2"
+                      >
+                        Cancel Setup
+                      </button>
+                    </div>
+                  )}
                 </div>
             )}
 
@@ -366,6 +437,14 @@ const LockScreen: React.FC<LockScreenProps> = ({
                         <FingerprintIcon className="w-12 h-12 stroke-[16px]" />
                         {isScanning && <div className="absolute inset-0 animate-[laser_0.6s_infinite_linear] h-1 bg-blue-100/50 shadow-xl" />}
                     </button>
+                    {isFingerprintSetup && onCancel && (
+                      <button 
+                        onClick={onCancel}
+                        className="mt-6 text-[10px] text-gray-500 hover:text-gray-400 font-bold uppercase tracking-widest px-4 py-2"
+                      >
+                        Cancel Setup
+                      </button>
+                    )}
                 </div>
             )}
           </>

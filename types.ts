@@ -22,6 +22,8 @@ export interface StoredApp {
 export interface LauncherSettings {
   passwordEnabled: boolean;
   passwordHash: string;
+  patternEnabled?: boolean;
+  patternHash?: string;
   fingerprintEnabled: boolean;
   faceIdEnabled: boolean;
   faceIdReference?: string; // Base64 of the enrolled face

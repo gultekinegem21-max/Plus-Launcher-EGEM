@@ -15,6 +15,8 @@ interface SettingsModalProps {
   onToggleEditMode: () => void;
   passwordEnabled: boolean;
   onManagePassword: () => void;
+  patternEnabled?: boolean;
+  onManagePattern?: () => void;
   onLock: () => void;
   fingerprintEnabled?: boolean;
   onToggleFingerprint?: () => void;
@@ -44,6 +46,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleEditMode,
   passwordEnabled,
   onManagePassword,
+  patternEnabled,
+  onManagePattern,
   onLock,
   fingerprintEnabled,
   onToggleFingerprint,
@@ -383,9 +387,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-white text-xs font-medium">
-                {t(language, "passwordLock", "Password Lock")}
+                {t(language, "passwordLock", "Lock Screen")}
               </p>
-              {passwordEnabled ? (
+              {(passwordEnabled || patternEnabled) ? (
                 <ShieldCheckIcon className="w-4 h-4 text-green-400" />
               ) : (
                 <LockIcon className="w-4 h-4 text-red-500 opacity-40" />
@@ -394,21 +398,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={onManagePassword}
-                className="py-2 bg-gray-700 text-white rounded-lg text-[10px] font-bold uppercase"
+                className="py-2 bg-gray-700 hover:bg-gray-600 transition-colors text-white rounded-lg text-[10px] font-bold uppercase"
               >
                 {passwordEnabled ? "Change PIN" : "Set PIN"}
               </button>
-              {passwordEnabled && (
+              <button
+                onClick={onManagePattern}
+                className="py-2 bg-gray-700 hover:bg-gray-600 transition-colors text-white rounded-lg text-[10px] font-bold uppercase"
+              >
+                {patternEnabled ? "Change Pattern" : "Set Pattern"}
+              </button>
+              {(passwordEnabled || patternEnabled) && (
                 <button
                   onClick={onLock}
-                  className="py-2 bg-blue-600 text-white rounded-lg text-[10px] font-bold uppercase"
+                  className="col-span-2 py-2 bg-blue-600 hover:bg-blue-500 transition-colors text-white rounded-lg text-[10px] font-bold uppercase mt-1"
                 >
                   Lock Now
                 </button>
               )}
             </div>
 
-            {passwordEnabled && onManageRecovery && (
+            {(passwordEnabled || patternEnabled) && onManageRecovery && (
               <div className="pt-1">
                 <button
                   onClick={onManageRecovery}
@@ -420,7 +430,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {passwordEnabled && onToggleFingerprint && (
+            {(passwordEnabled || patternEnabled) && onToggleFingerprint && (
               <div className="flex items-center justify-between pt-1">
                 <p className="text-white text-[10px] font-medium flex items-center gap-1">
                   <FingerprintIcon className="w-3 h-3" />{" "}
@@ -437,7 +447,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {passwordEnabled && onToggleFaceId && (
+            {(passwordEnabled || patternEnabled) && onToggleFaceId && (
               <div className="flex items-center justify-between">
                 <p className="text-white text-[10px] font-medium flex items-center gap-1">
                   <FaceIdIcon className="w-3 h-3" />{" "}
