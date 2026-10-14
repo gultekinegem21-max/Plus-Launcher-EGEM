@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { t } from '../i18n';
+import WeatherWidget from './WeatherWidget';
 
 const getGreeting = (lang: string = "en") => {
   const hour = new Date().getHours();
@@ -45,8 +46,11 @@ const Header: React.FC<HeaderProps> = ({ isEditMode, onToggleEditMode, hasCustom
   return (
     <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-white w-full gap-4">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-            <h1 className="text-xl font-bold truncate">Plus<span className="text-blue-500">+</span>Launcher</h1>
+            <h1 className="text-xl font-bold shrink-0">Plus<span className="text-blue-500">+</span>Launcher</h1>
             <div className="flex-1" />
+            <div className="sm:hidden shrink-0">
+                <WeatherWidget language={language} />
+            </div>
             <div className="flex items-center gap-2 sm:hidden shrink-0">
                {hasCustomApps && (
                     <button 
@@ -93,6 +97,7 @@ const Header: React.FC<HeaderProps> = ({ isEditMode, onToggleEditMode, hasCustom
             </div>
         </div>
         <div className="hidden sm:flex items-center gap-4">
+            <WeatherWidget language={language} />
             <div className="flex items-center gap-2">
                 {hasCustomApps && (
                     <button 
