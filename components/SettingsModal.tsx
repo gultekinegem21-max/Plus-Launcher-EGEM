@@ -7,6 +7,8 @@ import {
   FaceIdIcon,
   MailIcon,
 } from "./Icons";
+import AdminFeedbackViewer from "./AdminFeedbackViewer";
+import { submitFeedback, FeedbackCategory } from "../services/feedbackService";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -71,40 +73,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [adminPin, setAdminPin] = React.useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = React.useState(false);
-  const [feedback, setFeedback] = React.useState("");
-  const [feedbackSent, setFeedbackSent] = React.useState(false);
-  const [isViewingFeedback, setIsViewingFeedback] = React.useState(false);
-  const [feedbacks, setFeedbacks] = React.useState<
-    { id: number; text: string; user: string | null; date: string }[]
-  >(() => {
-    try {
-      const stored = localStorage.getItem("plus-launcher-feedback");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
   const wallpaperInputRef = React.useRef<HTMLInputElement>(null);
   const [wallpaperUploadSuccess, setWallpaperUploadSuccess] = React.useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = React.useState(false);
   const [showConfirmReset, setShowConfirmReset] = React.useState(false);
 
-  const handleSendFeedback = () => {
-    if (!feedback.trim()) return;
-    const newFb = {
-      id: Date.now(),
-      text: feedback.trim(),
-      user: currentUser || "Anonymous",
-      date: new Date().toLocaleDateString(),
-    };
-    const updated = [...feedbacks, newFb];
-    setFeedbacks(updated);
-    localStorage.setItem("plus-launcher-feedback", JSON.stringify(updated));
-    setFeedback("");
-    setFeedbackSent(true);
-    setTimeout(() => setFeedbackSent(false), 3000);
-  };
+  // User feedback drawer state
+  const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false);
+  const [userFeedbackText, setUserFeedbackText] = React.useState("");
+  const [userName, setUserName] = React.useState(currentUser || "");
+  const [userCategory, setUserCategory] = React.useState<FeedbackCategory>("feature");
+  const [userRating, setUserRating] = React.useState<number>(5);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false);
+  const [feedbackStatusMsg, setFeedbackStatusMsg] = React.useState("");
 
+  const handleUserSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userFeedbackText.trim()) return;
+
+    setIsSubmittingFeedback(true);
+    try {
+      await submitFeedback({
+        user: userName.trim() || currentUser || "Anonymous",
+        text: userFeedbackText.trim(),
+        category: userCategory,
+        rating: userRating,
+      });
+      setUserFeedbackText("");
+      setFeedbackStatusMsg("Thank you! Feedback sent to Admin.");
+      setTimeout(() => {
+        setFeedbackStatusMsg("");
+        setIsFeedbackOpen(false);
+      }, 2500);
+    } catch (err) {
+      console.error(err);
+      setFeedbackStatusMsg("Saved locally!");
+      setTimeout(() => setFeedbackStatusMsg(""), 2500);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
   // Reset admin state when modal closes
   React.useEffect(() => {
     if (!isOpen) {
@@ -351,34 +359,98 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </button>
           </div>
+          {/* User Feedback Submission Card */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2.5">
+            <button
+              type="button"
+              onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
+              className="w-full flex items-center justify-between text-left group"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm">💬</span>
+                <div>
+                  <p className="text-white text-xs font-semibold group-hover:text-amber-400 transition-colors">
+                    Send App Feedback
+                  </p>
+                  <p className="text-[9px] text-gray-400">
+                    Share suggestions or bug reports with Admin
+                  </p>
+                </div>
+              </div>
+              <span className="text-gray-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-white/5 group-hover:bg-white/10 transition-colors">
+                {isFeedbackOpen ? "Close" : "Open"}
+              </span>
+            </button>
 
-          <div className="h-px bg-gray-700" />
+            {isFeedbackOpen && (
+              <form onSubmit={handleUserSubmitFeedback} className="pt-2 border-t border-white/10 space-y-2.5 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-300 font-medium">Rating:</span>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        type="button"
+                        key={star}
+                        onClick={() => setUserRating(star)}
+                        className="p-0.5 hover:scale-110 transition-transform"
+                      >
+                        <svg
+                          className={`w-3.5 h-3.5 ${star <= userRating ? "fill-amber-400 text-amber-400" : "text-gray-600"}`}
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-          <div className="space-y-3">
-            <p className="text-white text-xs font-medium">App Feedback</p>
-            <div className="flex gap-2">
-              <input
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="What can we improve?..."
-                className="bg-black/50 text-white px-3 py-2 rounded-lg text-xs flex-1 border border-gray-700 focus:outline-none focus:border-blue-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSendFeedback();
-                }}
-              />
-              <button
-                onClick={handleSendFeedback}
-                disabled={!feedback.trim()}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase disabled:opacity-50 transition-colors"
-                title="Goes straight to Admin Panel"
-              >
-                {feedbackSent ? "Sent!" : "Send"}
-              </button>
-            </div>
-            {feedbackSent && (
-              <p className="text-[10px] text-green-400 font-medium px-1 animate-in fade-in transition-all">
-                Feedback sent to admin panel! Thank you.
-              </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Your Name (optional)"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="bg-black/40 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <select
+                    value={userCategory}
+                    onChange={(e) => setUserCategory(e.target.value as FeedbackCategory)}
+                    className="bg-black/40 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="feature">💡 Feature Request</option>
+                    <option value="bug">🐛 Bug Report</option>
+                    <option value="general">💬 General Feedback</option>
+                    <option value="praise">❤️ Praise</option>
+                  </select>
+                </div>
+
+                <textarea
+                  placeholder="What can we improve or add?..."
+                  value={userFeedbackText}
+                  onChange={(e) => setUserFeedbackText(e.target.value)}
+                  rows={2}
+                  className="w-full bg-black/40 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 resize-none"
+                />
+
+                <div className="flex items-center justify-between pt-1">
+                  {feedbackStatusMsg ? (
+                    <span className="text-[10px] text-emerald-400 font-medium animate-in fade-in">
+                      {feedbackStatusMsg}
+                    </span>
+                  ) : <span />}
+
+                  <button
+                    type="submit"
+                    disabled={!userFeedbackText.trim() || isSubmittingFeedback}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg text-[10px] font-bold uppercase transition-colors"
+                  >
+                    {isSubmittingFeedback ? "Sending..." : "Submit Feedback"}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
 
@@ -505,88 +577,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3 animate-in fade-in zoom-in-95">
-
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="flex items-center justify-between bg-black/40 border border-amber-500/20 px-3 py-2.5 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <div>
+                        <p className="text-[11px] font-bold text-amber-400">
+                          Admin Mode Unlocked
+                        </p>
+                        <p className="text-[9px] text-gray-400">
+                          PIN verified • Administrator privileges active
+                        </p>
+                      </div>
+                    </div>
                     <button
                       onClick={() => {
-                        onClose();
-                        if (onAddApp) onAddApp();
+                        setIsAdminUnlocked(false);
+                        setAdminPin("");
                       }}
-                      className="py-2 bg-amber-600/20 hover:bg-amber-600/40 text-amber-500 rounded-lg text-[10px] font-bold uppercase transition-colors"
+                      className="text-[9px] text-gray-400 hover:text-white uppercase font-bold tracking-wider px-2 py-1 bg-white/5 hover:bg-white/10 rounded border border-white/10 transition-colors"
                     >
-                      {t(language, "addApp", "Add App / Icon")}
-                    </button>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        onToggleEditMode();
-                      }}
-                      className={`py-2 rounded-lg text-[10px] font-bold uppercase transition-colors ${isEditMode ? "bg-red-600 text-white" : "bg-red-600/20 hover:bg-red-600/40 text-red-500"}`}
-                    >
-                      {isEditMode
-                        ? t(language, "done", "Done Deleting")
-                        : t(language, "delete", "Delete Apps")}
-                    </button>
-                    <button
-                      onClick={() => setIsViewingFeedback(!isViewingFeedback)}
-                      className="col-span-2 py-2 bg-amber-600 border border-amber-500/50 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 rounded-lg text-[10px] font-bold uppercase transition-colors"
-                    >
-                      {isViewingFeedback
-                        ? "Hide User Feedback"
-                        : "View User Feedback"}
+                      Lock
                     </button>
                   </div>
 
-                  {isViewingFeedback && (
-                    <div className="mt-4 p-3 bg-black/40 border border-gray-700 rounded-xl space-y-3 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                      <div className="flex items-center justify-between">
-                        <p className="text-gray-300 text-[10px] font-bold uppercase tracking-widest">
-                          Inbox ({feedbacks.length})
-                        </p>
-                        {feedbacks.length > 0 && (
-                          <button
-                            onClick={() => {
-                              if (confirm("Clear all feedback?")) {
-                                setFeedbacks([]);
-                                localStorage.removeItem(
-                                  "plus-launcher-feedback",
-                                );
-                              }
-                            }}
-                            className="text-[10px] text-red-400 hover:text-red-300 transition-colors uppercase font-bold"
-                          >
-                            Clear All
-                          </button>
-                        )}
-                      </div>
-
-                      {feedbacks.length === 0 ? (
-                        <p className="text-xs text-gray-500 text-center py-4">
-                          No feedback received yet.
-                        </p>
-                      ) : (
-                        feedbacks
-                          .slice()
-                          .reverse()
-                          .map((fb) => (
-                            <div
-                              key={fb.id}
-                              className="bg-gray-800/50 border border-gray-700/50 p-2 rounded-lg space-y-1"
-                            >
-                              <div className="flex justify-between items-start">
-                                <p className="text-[10px] text-blue-400 font-medium">
-                                  {fb.user}
-                                </p>
-                                <p className="text-[9px] text-gray-500">
-                                  {fb.date}
-                                </p>
-                              </div>
-                              <p className="text-xs text-white">{fb.text}</p>
-                            </div>
-                          ))
-                      )}
-                    </div>
-                  )}
+                  {/* Fully functional, real-time User Feedback Management for Admin */}
+                  <AdminFeedbackViewer currentUser={currentUser} />
                 </div>
               )}
             </div>

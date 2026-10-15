@@ -12,12 +12,32 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["text", "userId", "userName", "createdAt"]
+    },
+    "UserFeedback": {
+      "title": "UserFeedback",
+      "description": "User feedback submission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user": { "type": "string" },
+        "text": { "type": "string" },
+        "category": { "type": "string", "enum": ["feature", "bug", "general", "praise"] },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["new", "reviewed", "resolved"] },
+        "deviceInfo": { "type": "string" },
+        "adminNote": { "type": "string" }
+      },
+      "required": ["id", "user", "text", "createdAt", "status"]
     }
   },
   "firestore": {
     "/messages/{messageId}": {
       "schema": { "$ref": "#/entities/Message" },
       "description": "Global chat messages"
+    },
+    "/globals/feedbacks": {
+      "description": "Global synchronized user feedback submissions and admin triage records"
     }
   }
 }
